@@ -1,23 +1,37 @@
-import logo from './logo.svg';
-import './App.css';
+import "./config";
+import { useState, useEffect } from "react";
+import * as fcl from "@onflow/fcl";
 
 function App() {
+  const [user, setUser] = useState({ loggedIn: null })
+
+  useEffect(() => fcl.currentUser.subscribe(setUser), [])
+
+  const AuthedState = () => {
+    return (
+      <div>
+        <div>Address: {user?.addr ?? "No Address"}</div>
+        <button onClick={fcl.unauthenticate}>Log Out</button>
+      </div>
+    )
+  }
+
+  const UnauthenticatedState = () => {
+    return (
+      <div>
+        <button onClick={fcl.logIn}>Log In</button>
+        <button onClick={fcl.signUp}>Sign Up</button>
+      </div>
+    )
+  }
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <h1>Flow App</h1>
+      {user.loggedIn
+        ? <AuthedState />
+        : <UnauthenticatedState />
+      }
     </div>
   );
 }
