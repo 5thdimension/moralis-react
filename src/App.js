@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import * as fcl from "@onflow/fcl";
 
 function App() {
-  const [user, setUser] = useState({ loggedIn: null })
+  const [user, setUser] = useState({loggedIn: null})
 
   useEffect(() => fcl.currentUser.subscribe(setUser), [])
 
