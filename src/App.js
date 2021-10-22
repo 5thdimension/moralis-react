@@ -1,113 +1,75 @@
-import "./config";
-import { useState, useEffect } from "react";
-import * as fcl from "@onflow/fcl";
+import { useState } from "react";
+import moralis from "moralis";
+import "./App.css";
+import Dashboard from "./components/Dashboard";
+import img1 from "./images/decoration-star.png";
+import img2 from "./images/dash.jpeg";
+
+moralis.initialize(process.env.REACT_APP_MORALIS_APPLICATION_ID);
+moralis.serverURL = process.env.REACT_APP_MORALIS_SERVER_URL;
+const initialUser = moralis.User.current();
 
 function App() {
-  const [user, setUser] = useState({loggedIn: null})
-  const [name, setName] = useState('')
-  const [transactionStatus, setTransactionStatus] = useState(null) // NEW
+  const [user, setUser] = useState(initialUser);
 
-  useEffect(() => fcl.currentUser.subscribe(setUser), [])
-
-  const sendQuery = async () => {
-    const profile = await fcl.query({
-      cadence: `
-        import Profile from 0xProfile
-
-        pub fun main(address: Address): Profile.ReadOnly? {
-          return Profile.read(address)
-        }
-      `,
-      args: (arg, t) => [arg(user.addr, t.Address)]
-    })
-
-    setName(profile?.name ?? 'No Profile')
-  }
-
-  const initAccount = async () => {
-    const transactionId = await fcl.mutate({
-      cadence: `
-        import Profile from 0xProfile
-
-        transaction {
-          prepare(account: AuthAccount) {
-            // Only initialize the account if it hasn't already been initialized
-            if (!Profile.check(account.address)) {
-              // This creates and stores the profile in the user's account
-              account.save(<- Profile.new(), to: Profile.privatePath)
-
-              // This creates the public capability that lets applications read the profile's info
-              account.link<&Profile.Base{Profile.Public}>(Profile.publicPath, target: Profile.privatePath)
-            }
-          }
-        }
-      `,
-      payer: fcl.authz,
-      proposer: fcl.authz,
-      authorizations: [fcl.authz],
-      limit: 50
-    })
-
-    const transaction = await fcl.tx(transactionId).onceSealed()
-    console.log(transaction)
-  }
-
-  // NEW
-  const executeTransaction = async () => {
-    const transactionId = await fcl.mutate({
-      cadence: `
-        import Profile from 0xProfile
-
-        transaction(name: String) {
-          prepare(account: AuthAccount) {
-            account
-              .borrow<&Profile.Base{Profile.Owner}>(from: Profile.privatePath)!
-              .setName(name)
-          }
-        }
-      `,
-      args: (arg, t) => [arg("Flow Developer!", t.String)],
-      payer: fcl.authz,
-      proposer: fcl.authz,
-      authorizations: [fcl.authz],
-      limit: 50
-    })
-
-    fcl.tx(transactionId).subscribe(res => setTransactionStatus(res.status))
-  }
-
-  const AuthedState = () => {
-    return (
-      <div>
-        <div>Address: {user?.addr ?? "No Address"}</div>
-        <div>Profile Name: {name ?? "--"}</div>
-        <div>Transaction Status: {transactionStatus ?? "--"}</div> {/* NEW */}
-        <button onClick={sendQuery}>Send Query</button>
-        <button onClick={initAccount}>Init Account</button>
-        <button onClick={executeTransaction}>Execute Transaction</button> {/* NEW */}
-        <button onClick={fcl.unauthenticate}>Log Out</button>
-      </div>
-    )
-  }
-
-  const UnauthenticatedState = () => {
-    return (
-      <div>
-        <button onClick={fcl.logIn}>Log In</button>
-        <button onClick={fcl.signUp}>Sign Up</button>
-      </div>
-    )
-  }
+  const onLogin = async () => {
+    const user = await moralis.authenticate();
+    setUser(user);
+  };
 
   return (
-    <div>
-      <h1>Flow App</h1>
-      {user.loggedIn
-        ? <AuthedState />
-        : <UnauthenticatedState />
-      }
+    <div className="App">
+      {user ? (
+        <Dashboard />
+      ) : (
+        <div>
+          {/* Nav */}
+          <nav
+            id="navbarExample"
+            class="navbar navbar-expand-lg fixed-top navbar-light"
+            aria-label="Main navigation"
+          >
+            <div class="container">
+              <a class="navbar-brand logo-text py-3" href="/">
+                Moralised
+              </a>
+            </div>
+          </nav>
+          {/* hero */}
+          <header id="header" class="header">
+            <img class="decoration-star" src={img1} alt="alternative" />
+            <img class="decoration-star-2" src={img1} alt="alternative" />
+            <div class="container">
+              <div class="row">
+                <div class="col-lg-7 col-xl-5">
+                  <div class="text-container">
+                    <h1 class="h1-large">Moralised</h1>
+                    <p class="p-large">
+                      Your minimalist ETH dashboard. See your last transactions
+                      and tokens balance.
+                    </p>
+                    <button class="btn-outline-lg" onClick={onLogin}>
+                      Login
+                    </button>
+                  </div>
+                </div>
+                <div class="col-lg-5 col-xl-7 rounded">
+                  <div class="image-container ">
+                    <img
+                      class="img-fluid rounded"
+                      src={img2}
+                      alt="alternative"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+          {/* hero */}
+        </div>
+      )}
     </div>
-  )
+  );
 }
 
 export default App;
